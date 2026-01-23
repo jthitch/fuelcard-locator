@@ -1,0 +1,490 @@
+.map-container {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.map-wrapper {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+}
+
+.map-placeholder {
+  padding: 40px;
+  text-align: center;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 600px;
+}
+
+.map-placeholder h3 {
+  font-size: 2rem;
+  color: #2d3748;
+  margin-bottom: 16px;
+}
+
+.map-placeholder p {
+  color: #4a5568;
+  margin: 8px 0;
+  font-size: 1.1rem;
+}
+
+/* Leaflet Popup Styling */
+.map-popup {
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.popup-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0 0 8px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.popup-address {
+  font-size: 0.9rem;
+  color: #4a5568;
+  margin: 8px 0;
+  line-height: 1.4;
+}
+
+.popup-phone {
+  font-size: 0.85rem;
+  color: #718096;
+  margin: 4px 0;
+}
+
+.popup-distance {
+  font-size: 0.9rem;
+  color: #667eea;
+  font-weight: 600;
+  margin: 8px 0;
+  padding: 4px 8px;
+  background: #edf2f7;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.popup-fuel-cards {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.popup-fuel-cards strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #2d3748;
+  margin-bottom: 6px;
+}
+
+.popup-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.popup-tag {
+  background: #edf2f7;
+  color: #2d3748;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.popup-surcharge-inline {
+  font-size: 0.7rem;
+  color: #e53e3e;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.popup-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.popup-badge {
+  display: inline-block;
+  background: #48bb78;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Leaflet map container adjustments */
+.leaflet-container {
+  border-radius: 12px;
+  z-index: 0;
+}
+
+/* Custom logo marker styling */
+.custom-logo-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-logo-marker img {
+  transition: transform 0.2s;
+}
+
+.custom-logo-marker:hover img {
+  transform: scale(1.1);
+  z-index: 1000;
+}
+
+/* Fuel Card Coverage Legend */
+.fuel-card-coverage-legend {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  z-index: 1000;
+  max-width: 280px;
+  max-height: 80vh;
+  overflow-y: auto;
+  font-size: 0.875rem;
+}
+
+.legend-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legend-subtitle {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #667eea;
+  font-style: italic;
+}
+
+.popup-header-with-checkbox {
+  margin-bottom: 8px;
+}
+
+.popup-must-have-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.popup-must-have-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #48bb78;
+}
+
+.legend-subtitle {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #667eea;
+  font-style: italic;
+}
+
+.popup-header-with-checkbox {
+  margin-bottom: 8px;
+}
+
+.popup-must-have-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.popup-must-have-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #48bb78;
+}
+
+.legend-stats {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.legend-stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.legend-stat-label {
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.legend-stat-value {
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-color-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 2px solid white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.legend-card-name {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 0.875rem;
+}
+
+.legend-item-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.legend-percentage {
+  font-weight: 700;
+  color: #2d3748;
+  font-size: 0.9rem;
+}
+
+.legend-count {
+  color: #718096;
+  font-size: 0.75rem;
+}
+
+.legend-bar-container {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.legend-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.legend-expand-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.legend-expand-btn:hover {
+  background: #5568d3;
+}
+
+.legend-expand-btn:active {
+  background: #4c5bc0;
+}
+
+/* Map Draw Controls */
+.map-draw-controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.draw-btn {
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #667eea;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s;
+}
+
+.draw-btn:hover {
+  background: #667eea;
+  color: white;
+}
+
+.draw-btn.active {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+
+.clear-draw-btn {
+  background: #e53e3e;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.2s;
+}
+
+.clear-draw-btn:hover {
+  background: #c53030;
+}
+
+.brush-controls {
+  background: white;
+  border: 2px solid #10b981;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.brush-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 8px;
+}
+
+.brush-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e2e8f0;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.brush-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.brush-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #10b981;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.brush-size-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.brush-size-btn {
+  flex: 1;
+  padding: 6px 12px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.brush-size-btn:hover {
+  background: #059669;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .map-container {
+    min-height: 400px;
+  }
+  
+  .map-placeholder {
+    min-height: 400px;
+    padding: 24px;
+  }
+  
+  .map-placeholder h3 {
+    font-size: 1.5rem;
+  }
+  
+  .fuel-card-coverage-legend {
+    max-width: 240px;
+    padding: 12px;
+    font-size: 0.8rem;
+  }
+  
+  .legend-title {
+    font-size: 0.9rem;
+  }
+}
