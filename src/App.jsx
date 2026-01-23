@@ -645,13 +645,24 @@ function App() {
                 className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
                 onClick={() => setViewMode('list')}
               >
-                📋 List
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="3" y="4" width="14" height="2" fill="black"/>
+                  <rect x="3" y="9" width="14" height="2" fill="black"/>
+                  <rect x="3" y="14" width="14" height="2" fill="black"/>
+                </svg>
+                List
               </button>
               <button
                 className={`view-btn ${viewMode === 'map' ? 'active' : ''}`}
                 onClick={() => setViewMode('map')}
               >
-                🗺️ Map
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 3L7 2L10 5L13 4L17 6V17L13 18L10 15L7 16L3 14V3Z" stroke="black" strokeWidth="1.5" fill="none"/>
+                  <path d="M7 2V16" stroke="black" strokeWidth="1.5"/>
+                  <path d="M10 5V15" stroke="black" strokeWidth="1.5"/>
+                  <path d="M13 4V18" stroke="black" strokeWidth="1.5"/>
+                </svg>
+                Map
               </button>
             </div>
           </div>

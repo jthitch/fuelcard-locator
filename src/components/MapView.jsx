@@ -23,15 +23,40 @@ const userLocationIcon = L.divIcon({
   iconAnchor: [10, 10]
 })
 
-// Component to update map center when user location changes
+// Component to update map center only on initial load
 function MapUpdater({ center, zoom }) {
   const map = useMap()
+  const hasInitialized = useRef(false)
+  const userHasPanned = useRef(false)
   
+  // Only set initial center/zoom on first load
   useEffect(() => {
-    if (center) {
+    if (!hasInitialized.current && center) {
       map.setView(center, zoom)
+      hasInitialized.current = true
     }
   }, [center, zoom, map])
+  
+  // Track if user has manually panned the map
+  useEffect(() => {
+    const handleDragStart = () => {
+      userHasPanned.current = true
+    }
+    
+    const handleMoveEnd = () => {
+      userHasPanned.current = true
+    }
+    
+    map.on('dragstart', handleDragStart)
+    map.on('moveend', handleMoveEnd)
+    map.on('zoomend', handleMoveEnd)
+    
+    return () => {
+      map.off('dragstart', handleDragStart)
+      map.off('moveend', handleMoveEnd)
+      map.off('zoomend', handleMoveEnd)
+    }
+  }, [map])
   
   return null
 }

@@ -696,6 +696,14 @@
   font-weight: 500;
   transition: all 0.2s;
   font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.view-btn svg {
+  flex-shrink: 0;
 }
 
 .view-btn:hover {
@@ -707,6 +715,12 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-color: transparent;
+}
+
+.view-btn.active svg path,
+.view-btn.active svg rect {
+  fill: white;
+  stroke: white;
 }
 
 .main-content {
