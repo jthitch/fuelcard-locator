@@ -1,0 +1,42 @@
+/* Import the existing App.css styles */
+@import url('../App.css');
+
+.site-locator-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.site-locator-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.site-locator-header h1 {
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.site-locator-header p {
+  color: #4a5568;
+  font-size: 1.1rem;
+}
+
+.site-locator-container {
+  flex: 1;
+  display: flex;
+  gap: 24px;
+  padding: 24px;
+  max-width: 1800px;
+  margin: 0 auto;
+  width: 100%;
+}

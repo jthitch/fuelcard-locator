@@ -1,5 +1,5 @@
 {
-  "name": "fleetmaxx-site-locator",
+  "name": "fuelcard-site-locator",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -15,7 +15,8 @@
     "leaflet": "^1.9.4",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.2",

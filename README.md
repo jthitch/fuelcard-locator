@@ -1,4 +1,4 @@
-# FleetMaxx Site Locator
+# Fuel Card Site Locator
 
 A modern React web application for finding petrol stations that accept various fuel cards.
 
@@ -42,7 +42,7 @@ The built files will be in the `dist` directory.
 
 ## Data Source
 
-The application currently uses `stations_data.json` which was converted from the Excel file `fleetmaxx_fuelcard_stations.xlsx`. 
+The application currently uses `stations_data.json` which was converted from the Excel file containing fuel card station data. 
 
 When you're ready to connect to a database, you can:
 1. Replace the JSON import in `src/App.jsx` with an API call
