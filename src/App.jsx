@@ -40,6 +40,7 @@ function App() {
   const [showLocationMessage, setShowLocationMessage] = useState(false)
   const [mustHaveStations, setMustHaveStations] = useState([]) // Array of station indices
   const [drawnArea, setDrawnArea] = useState(null) // { center: [lat, lng], radius: meters }
+  const [comparisonView, setComparisonView] = useState(null) // { selectedCard, comparisonCard } or null
   
   // Collapsible sections state - only Search Location and Search Radius open by default
   const [collapsedSections, setCollapsedSections] = useState({
@@ -700,6 +701,8 @@ function App() {
               onDrawAreaChange={(area) => {
                 setDrawnArea(area)
               }}
+              comparisonView={comparisonView}
+              onComparisonViewChange={setComparisonView}
             />
           )}
         </div>

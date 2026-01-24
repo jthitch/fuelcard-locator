@@ -543,11 +543,12 @@ function useScaledRingRadius(logoSizePx = 36, baseMultiplier = 4) {
   return baseRadius * zoomFactor
 }
 
-function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], mustHaveStations = [], allStations = [], mustHaveFuelCards = null, onToggleMustHaveStation, onDrawAreaChange }) {
+function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], mustHaveStations = [], allStations = [], mustHaveFuelCards = null, onToggleMustHaveStation, onDrawAreaChange, comparisonView = null, onComparisonViewChange }) {
   const [showAllFuelCards, setShowAllFuelCards] = useState(false)
   const [isDrawing, setIsDrawing] = useState(false)
   const [drawnPaths, setDrawnPaths] = useState([]) // Array of { path: [[lat, lng], ...], bufferMeters: number }
   const [brushSize, setBrushSize] = useState(1000) // Buffer radius in meters, default 1km
+  const [comparisonModal, setComparisonModal] = useState(null) // { selectedCard, comparisonCard }
   
   // Debug: Log selected fuel cards
   useEffect(() => {
@@ -556,17 +557,20 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
     }
   }, [selectedFuelCards])
   // Cache icons by network to avoid recreating them
+  // Note: When in comparison view, icons are created dynamically per station
   const iconCache = useMemo(() => {
+    if (comparisonView) return null // Don't use cache in comparison view
+    
     const cache = new Map()
     const networks = [...new Set(stations.map(s => s.network).filter(Boolean))]
     networks.forEach(network => {
       const logoPath = getLogoPath(network)
-      cache.set(network, createLogoIcon(logoPath, 36))
+      cache.set(network, createLogoIcon(logoPath, null, 36))
     })
     // Add default icon for stations without network
-    cache.set(null, createLogoIcon('/logos/GENERIC.png', 36))
+    cache.set(null, createLogoIcon('/logos/GENERIC.png', null, 36))
     return cache
-  }, [stations])
+  }, [stations, comparisonView])
 
   // Calculate center of map - prioritize user location
   const center = useMemo(() => {
@@ -646,8 +650,45 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
 
   return (
     <div className="map-container">
+      {/* Comparison View Legend */}
+      {comparisonView && (
+        <div className="fuel-card-coverage-legend">
+          <h4 className="legend-title">
+            Comparison View
+            <button 
+              className="legend-close-btn"
+              onClick={() => onComparisonViewChange && onComparisonViewChange(null)}
+              title="Exit comparison view"
+            >
+              ×
+            </button>
+          </h4>
+          <div className="comparison-legend-items">
+            <div className="comparison-legend-item">
+              <div className="comparison-legend-indicator selected-only"></div>
+              <span className="comparison-legend-label">
+                {formatFuelCardName(comparisonView.selectedCard)} Only
+              </span>
+            </div>
+            <div className="comparison-legend-item">
+              <div className="comparison-legend-indicator comparison-only"></div>
+              <span className="comparison-legend-label">
+                {formatFuelCardName(comparisonView.comparisonCard)} Only
+              </span>
+            </div>
+            <div className="comparison-legend-item">
+              <div className="comparison-legend-indicator both-cards"></div>
+              <span className="comparison-legend-label">Both Cards</span>
+            </div>
+            <div className="comparison-legend-note">
+              Stations not accepting either card are hidden
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Fuel Card Coverage Legend */}
-      {fuelCardCoverage.length > 0 && (
+      {!comparisonView && fuelCardCoverage.length > 0 && (
         <div className="fuel-card-coverage-legend">
           <h4 className="legend-title">
             Fuel Card Coverage
@@ -664,14 +705,31 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
           <div className="legend-list">
             {(showAllFuelCards ? fuelCardCoverage : fuelCardCoverage.slice(0, 6)).map(({ card, count, percentage }) => {
               const color = getFuelCardColor(card)
+              const leadingCard = fuelCardCoverage.length > 0 ? fuelCardCoverage[0].card : null
+              const isClickable = fuelCardCoverage.length > 1 && card !== leadingCard
+              
               return (
-                <div key={card} className="legend-item">
+                <div 
+                  key={card} 
+                  className={`legend-item ${isClickable ? 'clickable' : ''}`}
+                  onClick={() => {
+                    // Open modal comparing this card to the leading card
+                    if (isClickable && leadingCard) {
+                      setComparisonModal({ selectedCard: card, comparisonCard: leadingCard })
+                    }
+                  }}
+                  style={{ cursor: isClickable ? 'pointer' : 'default' }}
+                  title={isClickable ? `Click to see stations missing compared to ${formatFuelCardName(leadingCard)}` : ''}
+                >
                   <div className="legend-item-header">
                     <div 
                       className="legend-color-indicator" 
                       style={{ backgroundColor: color }}
                     />
                     <span className="legend-card-name">{formatFuelCardName(card)}</span>
+                    {isClickable && (
+                      <span className="legend-click-hint">👆</span>
+                    )}
                   </div>
                   <div className="legend-item-stats">
                     <span className="legend-percentage">{percentage}%</span>
@@ -699,6 +757,23 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
             </button>
           )}
         </div>
+      )}
+      
+      {/* Comparison Modal */}
+      {comparisonModal && (
+        <ComparisonModal
+          selectedCard={comparisonModal.selectedCard}
+          comparisonCard={comparisonModal.comparisonCard}
+          stations={stations}
+          allStations={allStations}
+          onClose={() => setComparisonModal(null)}
+          onViewOnMap={(selectedCard, comparisonCard) => {
+            setComparisonModal(null)
+            if (onComparisonViewChange) {
+              onComparisonViewChange({ selectedCard, comparisonCard })
+            }
+          }}
+        />
       )}
       
       {/* Draw Button and Brush Controls */}
@@ -847,8 +922,30 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
             ? selectedFuelCards.filter(card => stationAcceptsFuelCard(station, card))
             : []
           
-          // Get cached icon based on network/brand
-          const stationIcon = iconCache.get(station.network) || iconCache.get(null)
+          // Determine comparison status if in comparison view
+          let comparisonStatus = null
+          if (comparisonView) {
+            const acceptsSelected = stationAcceptsFuelCard(station, comparisonView.selectedCard)
+            const acceptsComparison = stationAcceptsFuelCard(station, comparisonView.comparisonCard)
+            
+            // Skip stations that don't accept either card
+            if (!acceptsSelected && !acceptsComparison) {
+              return null
+            }
+            
+            if (acceptsSelected && acceptsComparison) {
+              comparisonStatus = 'both' // Higher opacity
+            } else if (acceptsSelected && !acceptsComparison) {
+              comparisonStatus = 'selected-only' // Green indicator
+            } else if (!acceptsSelected && acceptsComparison) {
+              comparisonStatus = 'comparison-only' // Blue indicator
+            }
+          }
+          
+          // Get icon - use cache if not in comparison view, otherwise create dynamically
+          const stationIcon = comparisonView
+            ? createLogoIcon(getLogoPath(station.network), comparisonStatus, 36)
+            : (iconCache?.get(station.network) || iconCache?.get(null) || createLogoIcon(getLogoPath(station.network), null, 36))
           
           // Create rings or dots based on number of matches
           const showRings = matchingSelectedCards.length > 0 && matchingSelectedCards.length <= 3
@@ -999,6 +1096,131 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
         )
       })}
       </MapContainer>
+    </div>
+  )
+}
+
+// Modal component to show stations missing when comparing two fuel cards
+function ComparisonModal({ selectedCard, comparisonCard: initialComparisonCard, stations, allStations, onClose, onViewOnMap }) {
+  const [comparisonCard, setComparisonCard] = useState(initialComparisonCard)
+  
+  // Get all available fuel cards from stations
+  const availableCards = useMemo(() => {
+    return getFuelCardNames(allStations || stations).filter(card => card !== selectedCard)
+  }, [allStations, stations, selectedCard])
+  
+  // Calculate missing stations: stations that accept comparisonCard but not selectedCard
+  const missingStations = useMemo(() => {
+    if (!selectedCard || !comparisonCard || !stations) return []
+    
+    return stations.filter(station => {
+      const acceptsComparison = stationAcceptsFuelCard(station, comparisonCard)
+      const acceptsSelected = stationAcceptsFuelCard(station, selectedCard)
+      // Station is missing if it accepts comparison card but not selected card
+      return acceptsComparison && !acceptsSelected
+    })
+  }, [selectedCard, comparisonCard, stations])
+  
+  // Calculate coverage statistics
+  const coverageStats = useMemo(() => {
+    if (!selectedCard || !comparisonCard || !stations) return null
+    
+    let bothCards = 0
+    let selectedOnly = 0
+    let comparisonOnly = 0
+    
+    stations.forEach(station => {
+      const acceptsSelected = stationAcceptsFuelCard(station, selectedCard)
+      const acceptsComparison = stationAcceptsFuelCard(station, comparisonCard)
+      
+      if (acceptsSelected && acceptsComparison) {
+        bothCards++
+      } else if (acceptsSelected && !acceptsComparison) {
+        selectedOnly++
+      } else if (!acceptsSelected && acceptsComparison) {
+        comparisonOnly++
+      }
+    })
+    
+    return { bothCards, selectedOnly, comparisonOnly }
+  }, [selectedCard, comparisonCard, stations])
+  
+  return (
+    <div className="comparison-modal-overlay" onClick={onClose}>
+      <div className="comparison-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="comparison-modal-header">
+          <h3 className="comparison-modal-title">
+            Stations Missing {formatFuelCardName(selectedCard)}
+          </h3>
+          <button className="comparison-modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="comparison-modal-subtitle">
+          <label className="comparison-select-label">
+            Compare to:{' '}
+            <select 
+              className="comparison-select"
+              value={comparisonCard}
+              onChange={(e) => setComparisonCard(e.target.value)}
+            >
+              {availableCards.map(card => (
+                <option key={card} value={card}>
+                  {formatFuelCardName(card)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="comparison-modal-content">
+          {/* Coverage Statistics */}
+          {coverageStats && (
+            <div className="comparison-stats-grid">
+              <div className="comparison-stat-card both-cards">
+                <div className="stat-value">{coverageStats.bothCards}</div>
+                <div className="stat-label">Both Cards</div>
+              </div>
+              <div className="comparison-stat-card selected-only">
+                <div className="stat-value">{coverageStats.selectedOnly}</div>
+                <div className="stat-label">{formatFuelCardName(selectedCard)} Only</div>
+              </div>
+              <div className="comparison-stat-card comparison-only">
+                <div className="stat-value">{coverageStats.comparisonOnly}</div>
+                <div className="stat-label">{formatFuelCardName(comparisonCard)} Only</div>
+              </div>
+            </div>
+          )}
+          
+          {/* View on Map Button */}
+          <button 
+            className="view-on-map-btn"
+            onClick={() => onViewOnMap && onViewOnMap(selectedCard, comparisonCard)}
+          >
+            <svg className="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            View Coverage on Map
+          </button>
+          
+          {missingStations.length === 0 ? (
+            <p className="comparison-modal-empty">
+              All stations that accept {formatFuelCardName(comparisonCard)} also accept {formatFuelCardName(selectedCard)}.
+            </p>
+          ) : (
+            <>
+              <div className="comparison-modal-count">
+                <strong>{missingStations.length}</strong> station{missingStations.length !== 1 ? 's' : ''} missing on {formatFuelCardName(selectedCard)}
+              </div>
+              <div className="comparison-modal-stations">
+                {missingStations.map((station, index) => (
+                  <div key={index} className="comparison-station-item">
+                    <div className="comparison-station-name">{station.name || 'Unnamed Station'}</div>
+                    <div className="comparison-station-address">{getFullAddress(station)}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

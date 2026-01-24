@@ -59,11 +59,38 @@ export const getLogoPath = (network) => {
   return '/logos/GENERIC.png';
 };
 
-// Create a Leaflet icon from a logo
-export const createLogoIcon = (logoPath, size = 32) => {
+// Create a Leaflet icon from a logo with optional comparison status
+export const createLogoIcon = (logoPath, comparisonStatus = null, size = 32) => {
+  // Determine styling based on comparison status
+  let borderStyle = ''
+  let opacity = 1
+  let indicator = ''
+  
+  if (comparisonStatus === 'both') {
+    // Higher opacity for stations that accept both cards
+    opacity = 0.7
+  } else if (comparisonStatus === 'selected-only') {
+    // Green border for stations only on selected card
+    borderStyle = 'border: 3px solid #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);'
+    indicator = '<div style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #10b981; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>'
+  } else if (comparisonStatus === 'comparison-only') {
+    // Blue border for stations only on comparison card
+    borderStyle = 'border: 3px solid #3b82f6; box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);'
+    indicator = '<div style="position: absolute; top: -4px; right: -4px; width: 12px; height: 12px; background: #3b82f6; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>'
+  }
+  
   return L.divIcon({
     className: 'custom-logo-marker',
-    html: `<img src="${logoPath}" alt="Station logo" style="width: ${size}px; height: ${size}px; object-fit: contain; border-radius: 50%; background: white; padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);" />`,
+    html: `
+      <div style="position: relative; width: ${size}px; height: ${size}px;">
+        <img 
+          src="${logoPath}" 
+          alt="Station logo" 
+          style="width: ${size}px; height: ${size}px; object-fit: contain; border-radius: 50%; background: white; padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); opacity: ${opacity}; ${borderStyle}" 
+        />
+        ${indicator}
+      </div>
+    `,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
     popupAnchor: [0, -size / 2]
