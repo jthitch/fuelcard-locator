@@ -1,0 +1,17 @@
+{
+    "company_name": "Fleetmaxx Solutions",
+    "company_address": "Nethan Street",
+    "company_city": "Motherwell",
+    "company_country": "Scotland",
+    "company_postcode": "ML1 3TF",
+    "company_phone": "01367 704 910",
+    "company_email": "info@fleetmaxxsolutions.co.uk",
+    "company_website": "https://www.fleetmaxxsolutions.co.uk/",
+    "company_logo": "https://www.fleetmaxxsolutions.co.uk/wp-content/uploads/2023/07/fleetmaxx_header-1.png",
+    "company_employees_details": {
+        "name": "Amy Grant",
+        "role": "Sales Advisor",
+        "email": "amy@fleetmaxxsolutions.co.uk",
+        "phone": "01367 704 911"
+        }
+    }

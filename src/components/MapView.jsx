@@ -18,16 +18,17 @@ L.Icon.Default.mergeOptions({
 // Custom icon for user location (blue marker)
 const userLocationIcon = L.divIcon({
   className: 'user-location-marker',
-  html: '<div style="background-color: #3b82f6; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+  html: '<div style="background-color: #084B83; width: 20px; height: 20px; border-radius: 50%; border: 3px solid #F0F6F6; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
   iconSize: [20, 20],
   iconAnchor: [10, 10]
 })
 
 // Component to update map center only on initial load
-function MapUpdater({ center, zoom }) {
+function MapUpdater({ center, zoom, searchedLocation, onMapViewChange }) {
   const map = useMap()
   const hasInitialized = useRef(false)
   const userHasPanned = useRef(false)
+  const previousSearchedLocation = useRef(null)
   
   // Only set initial center/zoom on first load
   useEffect(() => {
@@ -37,26 +38,260 @@ function MapUpdater({ center, zoom }) {
     }
   }, [center, zoom, map])
   
-  // Track if user has manually panned the map
+  // Recenter map when searchedLocation changes (user selected a location from dropdown)
   useEffect(() => {
-    const handleDragStart = () => {
+    if (searchedLocation && searchedLocation.lat && searchedLocation.lng) {
+      const newCenter = [searchedLocation.lat, searchedLocation.lng]
+      const previousCenter = previousSearchedLocation.current
+      
+      // Only recenter if the location actually changed
+      if (!previousCenter || 
+          previousCenter[0] !== newCenter[0] || 
+          previousCenter[1] !== newCenter[1]) {
+        map.flyTo(newCenter, zoom, {
+          duration: 1.0 // Smooth animation
+        })
+        previousSearchedLocation.current = newCenter
+      }
+    } else {
+      // Clear previous location when searchedLocation is cleared
+      previousSearchedLocation.current = null
+    }
+  }, [searchedLocation, map, zoom])
+  
+  // Track map view changes and notify parent
+  useEffect(() => {
+    const handleMoveEnd = () => {
       userHasPanned.current = true
+      if (onMapViewChange) {
+        const currentCenter = map.getCenter()
+        const currentZoom = map.getZoom()
+        onMapViewChange({
+          center: [currentCenter.lat, currentCenter.lng],
+          zoom: currentZoom
+        })
+      }
     }
     
-    const handleMoveEnd = () => {
+    const handleZoomEnd = () => {
+      userHasPanned.current = true
+      if (onMapViewChange) {
+        const currentCenter = map.getCenter()
+        const currentZoom = map.getZoom()
+        onMapViewChange({
+          center: [currentCenter.lat, currentCenter.lng],
+          zoom: currentZoom
+        })
+      }
+    }
+    
+    const handleDragStart = () => {
       userHasPanned.current = true
     }
     
     map.on('dragstart', handleDragStart)
     map.on('moveend', handleMoveEnd)
-    map.on('zoomend', handleMoveEnd)
+    map.on('zoomend', handleZoomEnd)
     
     return () => {
       map.off('dragstart', handleDragStart)
       map.off('moveend', handleMoveEnd)
-      map.off('zoomend', handleMoveEnd)
+      map.off('zoomend', handleZoomEnd)
     }
-  }, [map])
+  }, [map, onMapViewChange])
+  
+  return null
+}
+
+// Component to handle rectangle selection for report screenshots
+// Uses a standard 9:16 aspect ratio (portrait) for consistent report formatting
+function RectangleSelector({ isSelecting, onSelectionComplete }) {
+  const map = useMap()
+  const [startPoint, setStartPoint] = useState(null)
+  const [currentRect, setCurrentRect] = useState(null)
+  const rectRef = useRef(null)
+  const isSelectingRef = useRef(false)
+  const ASPECT_RATIO = 9 / 16 // Portrait aspect ratio for reports (height:width)
+  
+  useEffect(() => {
+    isSelectingRef.current = isSelecting
+  }, [isSelecting])
+  
+  useEffect(() => {
+    if (!isSelecting) {
+      // Clean up
+      if (rectRef.current) {
+        map.removeLayer(rectRef.current)
+        rectRef.current = null
+      }
+      setCurrentRect(null)
+      setStartPoint(null)
+      map.dragging.enable()
+      map.getContainer().style.cursor = ''
+      return
+    }
+    
+    // Disable map dragging when selecting
+    map.dragging.disable()
+    map.getContainer().style.cursor = 'crosshair'
+    
+    const handleMouseDown = (e) => {
+      if (!isSelectingRef.current) return
+      e.originalEvent.preventDefault()
+      e.originalEvent.stopPropagation()
+      
+      const latlng = e.latlng
+      setStartPoint([latlng.lat, latlng.lng])
+      
+      // Remove previous rectangle if exists
+      if (rectRef.current) {
+        map.removeLayer(rectRef.current)
+      }
+    }
+    
+    const handleMouseMove = (e) => {
+      if (!isSelectingRef.current || !startPoint) return
+      e.originalEvent.preventDefault()
+      e.originalEvent.stopPropagation()
+      
+      const latlng = e.latlng
+      const endPoint = [latlng.lat, latlng.lng]
+      
+      // Calculate raw bounds
+      const rawMinLat = Math.min(startPoint[0], endPoint[0])
+      const rawMaxLat = Math.max(startPoint[0], endPoint[0])
+      const rawMinLng = Math.min(startPoint[1], endPoint[1])
+      const rawMaxLng = Math.max(startPoint[1], endPoint[1])
+      
+      // Calculate center
+      const centerLat = (rawMinLat + rawMaxLat) / 2
+      const centerLng = (rawMinLng + rawMaxLng) / 2
+      
+      // Calculate raw dimensions
+      const rawLatDiff = rawMaxLat - rawMinLat
+      const rawLngDiff = rawMaxLng - rawMinLng
+      
+      // Adjust to maintain 9:16 aspect ratio (portrait)
+      // Use the larger dimension as the base
+      let finalLatDiff, finalLngDiff
+      const latAspectRatio = rawLatDiff / rawLngDiff
+      const targetAspectRatio = ASPECT_RATIO // 9/16 = 0.5625 (portrait: taller than wide)
+      
+      if (latAspectRatio > targetAspectRatio) {
+        // Height (lat) is too large relative to width, adjust width to maintain ratio
+        finalLatDiff = rawLatDiff
+        finalLngDiff = rawLatDiff / targetAspectRatio
+      } else {
+        // Width (lng) is too large relative to height, adjust height to maintain ratio
+        finalLngDiff = rawLngDiff
+        finalLatDiff = rawLngDiff * targetAspectRatio
+      }
+      
+      // Calculate final bounds maintaining aspect ratio
+      const minLat = centerLat - finalLatDiff / 2
+      const maxLat = centerLat + finalLatDiff / 2
+      const minLng = centerLng - finalLngDiff / 2
+      const maxLng = centerLng + finalLngDiff / 2
+      
+      const bounds = [[minLat, minLng], [maxLat, maxLng]]
+      
+      // Update or create rectangle
+      if (rectRef.current) {
+        rectRef.current.setBounds(bounds)
+      } else {
+        const rect = L.rectangle(bounds, {
+          color: '#084B83',
+          fillColor: '#084B83',
+          fillOpacity: 0.2,
+          weight: 2,
+          dashArray: '5, 5'
+        })
+        rect.addTo(map)
+        rectRef.current = rect
+      }
+      setCurrentRect(bounds)
+    }
+    
+    const handleMouseUp = (e) => {
+      if (!isSelectingRef.current || !startPoint) return
+      e.originalEvent.preventDefault()
+      e.originalEvent.stopPropagation()
+      
+      const latlng = e.latlng
+      const endPoint = [latlng.lat, latlng.lng]
+      
+      // Calculate raw bounds
+      const rawMinLat = Math.min(startPoint[0], endPoint[0])
+      const rawMaxLat = Math.max(startPoint[0], endPoint[0])
+      const rawMinLng = Math.min(startPoint[1], endPoint[1])
+      const rawMaxLng = Math.max(startPoint[1], endPoint[1])
+      
+      // Calculate center
+      const centerLat = (rawMinLat + rawMaxLat) / 2
+      const centerLng = (rawMinLng + rawMaxLng) / 2
+      
+      // Calculate raw dimensions
+      const rawLatDiff = rawMaxLat - rawMinLat
+      const rawLngDiff = rawMaxLng - rawMinLng
+      
+      // Adjust to maintain 9:16 aspect ratio (portrait)
+      let finalLatDiff, finalLngDiff
+      const latAspectRatio = rawLatDiff / rawLngDiff
+      const targetAspectRatio = ASPECT_RATIO // 9/16 = 0.5625 (portrait: taller than wide)
+      
+      if (latAspectRatio > targetAspectRatio) {
+        // Height (lat) is too large relative to width, adjust width to maintain ratio
+        finalLatDiff = rawLatDiff
+        finalLngDiff = rawLatDiff / targetAspectRatio
+      } else {
+        // Width (lng) is too large relative to height, adjust height to maintain ratio
+        finalLngDiff = rawLngDiff
+        finalLatDiff = rawLngDiff * targetAspectRatio
+      }
+      
+      // Calculate final bounds
+      const minLat = centerLat - finalLatDiff / 2
+      const maxLat = centerLat + finalLatDiff / 2
+      const minLng = centerLng - finalLngDiff / 2
+      const maxLng = centerLng + finalLngDiff / 2
+      
+      const bounds = [[minLat, minLng], [maxLat, maxLng]]
+      
+      // Only complete if rectangle has meaningful size
+      const latDiff = maxLat - minLat
+      const lngDiff = maxLng - minLng
+      if (latDiff > 0.001 && lngDiff > 0.001) {
+        onSelectionComplete({
+          bounds: bounds,
+          center: [centerLat, centerLng],
+          mapInstance: map // Pass the map instance for coordinate conversion
+        })
+      }
+      
+      // Clean up
+      if (rectRef.current) {
+        map.removeLayer(rectRef.current)
+        rectRef.current = null
+      }
+      setCurrentRect(null)
+      setStartPoint(null)
+    }
+    
+    map.on('mousedown', handleMouseDown)
+    map.on('mousemove', handleMouseMove)
+    map.on('mouseup', handleMouseUp)
+    
+    return () => {
+      map.off('mousedown', handleMouseDown)
+      map.off('mousemove', handleMouseMove)
+      map.off('mouseup', handleMouseUp)
+      if (rectRef.current) {
+        map.removeLayer(rectRef.current)
+      }
+      map.dragging.enable()
+      map.getContainer().style.cursor = ''
+    }
+  }, [isSelecting, startPoint, map, onSelectionComplete])
   
   return null
 }
@@ -338,7 +573,7 @@ function DrawingHandler({ isDrawing, onDrawComplete, brushSize = 1000 }) {
 }
 
 // Component to render circles along a drawn path for smooth "worm" effect
-function DrawnPathCircles({ path, radius }) {
+function DrawnPathCircles({ path, radius, visible = true }) {
   const map = useMap()
   const circlesRef = useRef([])
   
@@ -354,7 +589,7 @@ function DrawnPathCircles({ path, radius }) {
       const circle = L.circle([point[0], point[1]], {
         radius: validRadius,
         fillColor: '#10b981',
-        fillOpacity: 0.05,
+        fillOpacity: visible ? 0.05 : 0,
         weight: 0
       })
       circle.addTo(map)
@@ -374,7 +609,7 @@ function DrawnPathCircles({ path, radius }) {
           const interCircle = L.circle([interLat, interLng], {
             radius: validRadius,
             fillColor: '#10b981',
-            fillOpacity: 0.05,
+            fillOpacity: visible ? 0.05 : 0,
             weight: 0
           })
           interCircle.addTo(map)
@@ -392,7 +627,44 @@ function DrawnPathCircles({ path, radius }) {
       })
       circlesRef.current = []
     }
-  }, [path, radius, map])
+  }, [path, radius, map, visible])
+  
+  // Animate opacity when visibility changes
+  useEffect(() => {
+    const circles = circlesRef.current
+    if (circles.length === 0) return
+    
+    const targetOpacity = visible ? 0.05 : 0
+    const duration = 300 // 300ms animation
+    const startTime = Date.now()
+    
+    // Get current opacity from first circle, or use default
+    const currentCircle = circles[0]
+    const startOpacity = currentCircle?.options?.fillOpacity ?? (visible ? 0 : 0.05)
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(elapsed / duration, 1)
+      // Ease in/out
+      const eased = progress < 0.5 
+        ? 2 * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2
+      
+      const currentOpacity = startOpacity + (targetOpacity - startOpacity) * eased
+      
+      circles.forEach(circle => {
+        if (circle && circle.setStyle) {
+          circle.setStyle({ fillOpacity: currentOpacity })
+        }
+      })
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate)
+      }
+    }
+    
+    animate()
+  }, [visible])
   
   return null
 }
@@ -543,10 +815,36 @@ function useScaledRingRadius(logoSizePx = 36, baseMultiplier = 4) {
   return baseRadius * zoomFactor
 }
 
-function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], mustHaveStations = [], allStations = [], mustHaveFuelCards = null, onToggleMustHaveStation, onDrawAreaChange, comparisonView = null, onComparisonViewChange }) {
+function MapView({ 
+  stations, 
+  userLocation, 
+  radiusMiles, 
+  selectedFuelCards = [], 
+  mustHaveStations = [], 
+  allStations = [], 
+  mustHaveFuelCards = null, 
+  onToggleMustHaveStation, 
+  onDrawAreaChange, 
+  comparisonView = null, 
+  onComparisonViewChange,
+  onAddComparisonToReport = null,
+  locationSearchTerm = '',
+  onLocationSearchTermChange,
+  onLocationSearch,
+  locationSearchResults = [],
+  locationSearchLoading = false,
+  onLocationSelect,
+  searchedLocation = null,
+  onMapViewChange = null,
+  initialCenter = null,
+  initialZoom = null,
+  isSelectingRectangle = false,
+  onRectangleSelect = null
+}) {
   const [showAllFuelCards, setShowAllFuelCards] = useState(false)
   const [isDrawing, setIsDrawing] = useState(false)
   const [drawnPaths, setDrawnPaths] = useState([]) // Array of { path: [[lat, lng], ...], bufferMeters: number }
+  const [showDrawnPaths, setShowDrawnPaths] = useState(true) // Control visibility of drawn paths
   const [brushSize, setBrushSize] = useState(1000) // Buffer radius in meters, default 1km
   const [comparisonModal, setComparisonModal] = useState(null) // { selectedCard, comparisonCard }
   
@@ -572,8 +870,12 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
     return cache
   }, [stations, comparisonView])
 
-  // Calculate center of map - prioritize user location
+  // Calculate center of map - prioritize searched location, then user location
   const center = useMemo(() => {
+    if (searchedLocation && searchedLocation.lat && searchedLocation.lng) {
+      return [searchedLocation.lat, searchedLocation.lng]
+    }
+    
     if (userLocation && userLocation.lat && userLocation.lng) {
       return [userLocation.lat, userLocation.lng]
     }
@@ -585,7 +887,7 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
     const avgLat = stations.reduce((sum, s) => sum + s.lat, 0) / stations.length
     const avgLng = stations.reduce((sum, s) => sum + s.lng, 0) / stations.length
     return [avgLat, avgLng]
-  }, [stations, userLocation])
+  }, [stations, userLocation, searchedLocation])
 
   // Calculate zoom level based on radius or stations
   const zoom = useMemo(() => {
@@ -773,21 +1075,96 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
               onComparisonViewChange({ selectedCard, comparisonCard })
             }
           }}
+          onAddToReport={onAddComparisonToReport}
         />
       )}
       
-      {/* Draw Button and Brush Controls */}
+      {/* Draw Button and Location Search Controls */}
       <div className="map-draw-controls">
-        <button
-          className={`draw-btn ${isDrawing ? 'active' : ''}`}
-          onClick={() => {
-            setIsDrawing(!isDrawing)
-            // When canceling, just exit drawing mode - don't clear drawn paths
-            // User can still navigate and move the map
-          }}
-        >
-          {isDrawing ? '✕ Cancel' : '✏️ Draw'}
-        </button>
+        <div className="map-controls-row">
+          <button
+            className={`draw-btn ${isDrawing ? 'active' : ''}`}
+            onClick={() => {
+              if (isDrawing) {
+                // Cancel: fade out visual but keep area active for filtering
+                setIsDrawing(false)
+                setShowDrawnPaths(false)
+                // Don't clear the draw area from filtering - keep it active
+              } else {
+                // Draw: fade in and show drawn paths if they exist
+                setIsDrawing(true)
+                if (drawnPaths.length > 0) {
+                  setShowDrawnPaths(true)
+                }
+              }
+            }}
+          >
+            {isDrawing ? (
+              <>
+                <span>✕</span> Cancel
+              </>
+            ) : (
+              <>
+                <img src="/pencil.png" alt="Draw" />
+                Draw
+              </>
+            )}
+          </button>
+          <div className="location-search-container">
+            <input
+              type="text"
+              placeholder="Enter postcode or location..."
+              value={locationSearchTerm}
+              onChange={(e) => {
+                if (onLocationSearchTermChange) {
+                  onLocationSearchTermChange(e.target.value)
+                }
+                if (onLocationSearch) {
+                  onLocationSearch(e.target.value)
+                }
+              }}
+              className="location-search-input-map"
+            />
+            {locationSearchLoading && (
+              <div className="location-search-loading">Searching...</div>
+            )}
+            {locationSearchResults.length > 0 && (
+              <div className="location-results-map">
+                {locationSearchResults.map((result, index) => (
+                  <button
+                    key={index}
+                    className="location-result-item-map"
+                    onClick={() => {
+                      if (onLocationSelect) {
+                        onLocationSelect(result)
+                      }
+                    }}
+                  >
+                    {result.display_name}
+                  </button>
+                ))}
+              </div>
+            )}
+            {searchedLocation && (
+              <div className="selected-location-map">
+                <span>📍 {searchedLocation.displayName}</span>
+                <button 
+                  onClick={() => {
+                    if (onLocationSearchTermChange) {
+                      onLocationSearchTermChange('')
+                    }
+                    if (onLocationSelect) {
+                      onLocationSelect(null)
+                    }
+                  }}
+                  className="clear-location-btn-map"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
         {isDrawing && (
           <div className="brush-controls">
             <label className="brush-label">
@@ -842,7 +1219,21 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={!isDrawing}
       >
-        <MapUpdater center={center} zoom={zoom} />
+        <MapUpdater 
+          center={initialCenter || center} 
+          zoom={initialZoom || zoom} 
+          searchedLocation={searchedLocation}
+          onMapViewChange={onMapViewChange}
+        />
+        <RectangleSelector
+          isSelecting={isSelectingRectangle}
+          onSelectionComplete={(selection) => {
+            if (onRectangleSelect) {
+              onRectangleSelect(selection)
+            }
+            setIsSelectingRectangleLocal(false)
+          }}
+        />
         <DrawingHandler 
           isDrawing={isDrawing}
           brushSize={brushSize}
@@ -867,7 +1258,7 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
         {/* Drawn search areas - show as series of circles for smooth "worm" effect */}
         {drawnPaths && drawnPaths.length > 0 && drawnPaths.map((drawnPath, index) => (
           drawnPath.path && drawnPath.path.length > 0 && (
-            <DrawnPathCircles key={`path-${index}`} path={drawnPath.path} radius={drawnPath.bufferMeters || 1000} />
+            <DrawnPathCircles key={`path-${index}`} path={drawnPath.path} radius={drawnPath.bufferMeters || 1000} visible={showDrawnPaths} />
           )
         ))}
         
@@ -890,8 +1281,8 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
                 center={[userLocation.lat, userLocation.lng]}
                 radius={radiusMiles * 1609.34} // Convert miles to meters
                 pathOptions={{
-                  color: '#667eea',
-                  fillColor: '#667eea',
+                  color: '#084B83',
+                  fillColor: '#084B83',
                   fillOpacity: 0.1,
                   weight: 2
                 }}
@@ -1101,7 +1492,7 @@ function MapView({ stations, userLocation, radiusMiles, selectedFuelCards = [], 
 }
 
 // Modal component to show stations missing when comparing two fuel cards
-function ComparisonModal({ selectedCard, comparisonCard: initialComparisonCard, stations, allStations, onClose, onViewOnMap }) {
+function ComparisonModal({ selectedCard, comparisonCard: initialComparisonCard, stations, allStations, onClose, onViewOnMap, onAddToReport }) {
   const [comparisonCard, setComparisonCard] = useState(initialComparisonCard)
   
   // Get all available fuel cards from stations
@@ -1189,16 +1580,35 @@ function ComparisonModal({ selectedCard, comparisonCard: initialComparisonCard, 
             </div>
           )}
           
-          {/* View on Map Button */}
-          <button 
-            className="view-on-map-btn"
-            onClick={() => onViewOnMap && onViewOnMap(selectedCard, comparisonCard)}
-          >
-            <svg className="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
-            View Coverage on Map
-          </button>
+          {/* Action Buttons */}
+          <div className="comparison-modal-actions">
+            <button 
+              className="view-on-map-btn"
+              onClick={() => onViewOnMap && onViewOnMap(selectedCard, comparisonCard)}
+            >
+              <svg className="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              View Coverage on Map
+            </button>
+            {onAddToReport && (
+              <button 
+                className="add-to-report-btn"
+                onClick={() => {
+                  if (onAddToReport) {
+                    onAddToReport({
+                      selectedCard,
+                      comparisonCard,
+                      missingStations,
+                      stats: coverageStats
+                    })
+                  }
+                }}
+              >
+                Add to Report
+              </button>
+            )}
+          </div>
           
           {missingStations.length === 0 ? (
             <p className="comparison-modal-empty">

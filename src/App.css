@@ -15,7 +15,7 @@
 
 .app-header h1 {
   font-size: 2.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #084B83 0%, #42BFDD 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -31,14 +31,15 @@
 .location-toast {
   position: fixed;
   top: 20px;
-  left: 20px;
-  background: white;
+  left: 352px; /* Position to the right of floating sidebar */
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   color: #2d3748;
   padding: 12px 24px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   font-weight: 500;
-  z-index: 1000;
+  z-index: 2000;
   animation: slideInLeft 0.3s ease-out, fadeOut 0.3s ease-in 1.7s forwards;
 }
 
@@ -92,16 +93,22 @@
 }
 
 .collapsible-section {
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 8px;
   overflow: hidden;
-  background: white;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
   margin-bottom: 12px;
   transition: box-shadow 0.2s;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .collapsible-section:hover {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 
+              inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.6);
 }
 
 .collapsible-header {
@@ -110,7 +117,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #f7fafc;
+  background: transparent;
   border: none;
   cursor: pointer;
   font-family: inherit;
@@ -119,17 +126,35 @@
 }
 
 .collapsible-header:hover {
-  background: #edf2f7;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .collapsible-title {
   font-weight: 600;
   color: #2d3748;
   font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: #084B83;
+  color: white;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .collapsible-icon {
-  color: #667eea;
+  color: #084B83;
   font-size: 0.8rem;
   transition: transform 0.2s;
   user-select: none;
@@ -177,7 +202,7 @@
 
 .search-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #084B83;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -215,7 +240,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #084B83 0%, #42BFDD 100%);
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -224,7 +249,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #084B83 0%, #42BFDD 100%);
   cursor: pointer;
   border: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -233,7 +258,7 @@
 .radius-value {
   text-align: center;
   font-weight: 600;
-  color: #667eea;
+  color: #084B83;
   font-size: 1rem;
   padding: 4px 0;
 }
@@ -248,7 +273,7 @@
 }
 
 .location-status {
-  color: #667eea;
+  color: #084B83;
   background: #edf2f7;
 }
 
@@ -282,14 +307,14 @@
 }
 
 .checkbox-label:hover {
-  color: #667eea;
+  color: #084B83;
 }
 
 .feature-checkbox {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: #084B83;
 }
 
 .fuel-card-filters {
@@ -506,7 +531,7 @@
 }
 
 .must-have-card-tag {
-  background: #667eea;
+  background: #084B83;
   color: white;
   padding: 4px 10px;
   border-radius: 4px;
@@ -553,7 +578,7 @@
 
 .search-location-btn {
   padding: 12px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #084B83 0%, #42BFDD 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -676,7 +701,7 @@
 }
 
 .results-count strong {
-  color: #667eea;
+  color: #084B83;
   font-size: 1.1rem;
 }
 
@@ -709,12 +734,12 @@
 }
 
 .view-btn:hover {
-  border-color: #667eea;
+  border-color: #084B83;
   background: #f7fafc;
 }
 
 .view-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #084B83 0%, #42BFDD 100%);
   color: white;
   border-color: transparent;
 }
